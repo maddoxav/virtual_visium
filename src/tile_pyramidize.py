@@ -3,6 +3,7 @@ import os
 
 # not cross-platform!!! windows only right now!!!
 # replace with path to your own vips bin folder
+# note!!! can not import pyvips and openslide together, some DLL path issue??? 
 VIPSHOME = "C:\\Users\\maddoxav\\vips-dev-w64-web-8.12.2\\vips-dev-8.12\\bin"
 with os.add_dll_directory(VIPSHOME):
     import pyvips
