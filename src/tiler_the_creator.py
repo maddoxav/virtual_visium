@@ -146,7 +146,7 @@ if __name__ == "__main__":
     wsi = open_slide(args.wsi_file)
     coords = coords_from_file(args.coord_file)
     tile_info = TileInfo(
-        Path(wsi, args.wsi_file).stem, coords, args.level, (args.width, args.height)
+        wsi, Path(args.wsi_file).stem, coords, args.level, (args.width, args.height)
     )
 
     tile_writer(wsi_tile_generator(tile_info), Path(args.dest_dir))
