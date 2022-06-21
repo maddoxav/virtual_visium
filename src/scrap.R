@@ -158,3 +158,4 @@ brain <-
 top.features <- head(SpatiallyVariableFeatures(brain, selection.method = "markvariogram"), 6)
 SpatialFeaturePlot(brain, images = "brain1A", features = top.features, ncol = 3, alpha = c(0.1, 1))
 
+# comment comment

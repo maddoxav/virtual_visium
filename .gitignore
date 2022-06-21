@@ -2,4 +2,4 @@ virtual_visium_venv/
 *\.ipynb_checkpoints/
 *__pycache__/
 *\.vscode/
-src/scrap\.*
+
