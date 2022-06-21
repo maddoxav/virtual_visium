@@ -131,30 +131,6 @@ def coords_from_file(file_path):
     return list(coord_df.itertuples(index=False, name=None))
 
 
-data_path = r"C:\Users\maddoxav\OneDrive - Michigan Medicine\Documents\Rao_Lab\data\GBM_spatial_transcriptomics\Sample-1512\TP_Images"
-tile1 = TileInfo(
-    wsi=open_slide(data_path + r"\20H214_Al-Holou_GEX_Slide_Square_A.tif"),
-    name="20H214_Al-Holou_GEX_Slide_Square_A",
-    coords=[(7700, 7700), (7800, 7800), (7900, 7900)],
-    level=0,
-    size=(200, 200),
-)
-tile2 = TileInfo(
-    wsi=open_slide(data_path + r"\20H214_Al-Holou_GEX_Slide_Square_C.tif"),
-    name="20H214_Al-Holou_GEX_Slide_Square_C",
-    coords=[(7700, 7700), (7800, 7800), (7900, 7900)],
-    level=0,
-    size=(200, 200),
-)
-sample_tile_info = [tile1, tile2]
-tile_writer(
-    sample_tile_generator(sample_tile_info),
-    Path(
-        r"C:\Users\maddoxav\OneDrive - Michigan Medicine\Documents\Rao_Lab\data\GBM_spatial_transcriptomics\tile_images"
-    ),
-)
-
-
 if __name__ == "__main__":
     import argparse
 
