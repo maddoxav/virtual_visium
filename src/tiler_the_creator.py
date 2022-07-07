@@ -48,7 +48,7 @@ def save_tile(img, dir, sample_id, tissue_id, barcode, tile_size):
 def main(sample_path, wsi_fname, sample_id, tissue_id, tile_size):
     """Tile WSI and save tiles"""
     # read barcode coords df
-    barcode_df_fname = f"{tissue_id}-{sample_id}-tc.feather"
+    barcode_df_fname = f"{sample_id}-tc.feather"
     barcode_df_path = Path(sample_path) / "assay_data" / barcode_df_fname
     barcode_df = pd.read_feather(barcode_df_path)
     # read low res img dimensions
@@ -83,7 +83,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     tile_size = (args.tile_width, args.tile_height)
-    
+
     main(
         args.sample_path,
         args.wsi_fname,
