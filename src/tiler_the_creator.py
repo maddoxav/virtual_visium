@@ -1,152 +1,93 @@
-import os
-
 # not cross-platform!!! windows only right now!!!
 # replace with path to your own openslide bin folder
+import os
+
 OPENSLIDE_PATH = (
     r"C:\Users\maddoxav\openslide-win64-20171122\openslide-win64-20171122\bin"
 )
 with os.add_dll_directory(OPENSLIDE_PATH):
-    import openslide
     from openslide import open_slide
 from pathlib import Path
-from PIL import Image
 from dataclasses import dataclass
 import pandas as pd
-import random
 
 
-@dataclass
-class TileInfo:
-    """Tiling information for a WSI
-    Attributes:
-        wsi (openslide.OpenSlide): whole slide image aka WSI
-        name (str): name of WSI file
-        coords (list[tuple[x, y]]): coordinates for top left pixel of tiles at level 0
-        level (int): level in wsi
-        size (tuple[width, height]): tile size
-    """
-
-    wsi: openslide.OpenSlide
-    name: str
-    coords: list[tuple[int, int]]
-    level: int
-    size: tuple[int, int]
-
-
-@dataclass
-class Tile:
-    """Tile image and information
-    Attributes:
-        im (PIL.Image): tile image
-        name (str): name of tile's WSI file
-        coord (tuple[x,y]): coordinate of tile in wsi
-        level (int): level of tile in WSI
-        size (tuple[width, height]): tile size
-    """
-
-    im: Image
-    name: str
-    coords: tuple[int, int]
-    level: int
-    size: tuple[int, int]
-
-
-def wsi_tile_generator(tile_info):
-    """Generate tiles from H&E WSI at spatial coordinates
+def barcode_coords_to_tile_coords(bar_coords, tile_size, lr_size, hr_size):
+    """Barcode coordinates are visium spot location in low res image from Seurat object.
+        Tile coords are top left tile coordinates in high res image with spot at center
+        of tile.
     Args:
-        tile_info (TileInfo): information about tiles for a WSI
-    Yields:
-        tile (Tile): tile image and info
-    """
-    for coords in tile_info.coords:
-        tile_im = tile_info.wsi.read_region(
-            coords, tile_info.level, tile_info.size
-        ).convert("RGB")
-        tile = Tile(
-            im=tile_im,
-            name=tile_info.name,
-            coords=coords,
-            level=tile_info.level,
-            size=tile_info.size,
-        )
-        yield tile
-
-
-def sample_tile_generator(sample_tile_info, shuffle=True, seed=42):
-    """Generate tiles from sample of H&E WSIs at spatial coordinates
-    Args:
-        sample_tile_info (list[TileInfo]): list of tile information for each WSI
-        shuffle (bool): shuffle order of tiles
-        seed (int): seed for shuffling
-    Yields:
-        tile (Tile): tile image and info
-    """
-    name_to_wsi = dict()
-    sample_tile_info_list = list()
-    for tile_info in sample_tile_info:
-        name_to_wsi[tile_info.name] = tile_info.wsi
-        tile_info_list = [
-            Tile(None, tile_info.name, coords, tile_info.level, tile_info.size)
-            for coords in tile_info.coords
-        ]
-        sample_tile_info_list += tile_info_list
-    if shuffle:
-        random.seed(seed)
-        random.shuffle(sample_tile_info_list)
-    for tile in sample_tile_info_list:
-        tile.im = (
-            name_to_wsi[tile.name]
-            .read_region(tile.coords, tile.level, tile.size)
-            .convert("RGB")
-        )
-        yield tile
-
-
-def tile_writer(tile_generator, dest_dir):
-    """Write tiles from generator to jpg files
-    Args:
-        tile_generator (generator): generator of tiles
-        dest_dir (pathlib.Path): directory where tiles will be saved
-    """
-    if not dest_dir.exists():
-        os.mkdir(dest_dir)
-
-    for tile in tile_generator:
-        size_str = f"{tile.size[0]}-{tile.size[1]}"
-        coord_str = f"{tile.coords[0]}-{tile.coords[1]}"
-        tile_info_str = f"TILE-{coord_str}-{tile.level}-{size_str}"
-        filename = f"{tile.name}_{tile_info_str}.jpg"
-        dest_path = dest_dir / filename
-        tile.im.save(dest_path)
-
-
-def coords_from_file(file_path):
-    """Generate list of tile coordinates from file
-    Args:
-        file_path (pathlib.Path): coordinate file path, xs are 1st col, ys are 2nd col
+        bar_coords (pd.DataFrame): barcode, imagerow, imagecol
+        tile_size (tuple[w, h]): width and height of tiles
+        lr_size (tuple[w, h]): low res image size
+        hr_size (tuple[w, h]): high res image size
     Returns:
-        coords (list[tuple[x, y]]): coordinates for top left pixel of tiles at level 0
+        tile_coords (pd.DataFrame): barcode, imagerow, imagecol
     """
-    coord_df = pd.read_csv(file_path, sep=",", header=None)
-    return list(coord_df.itertuples(index=False, name=None))
+    # scale coordinates to high res image size
+    x_scale = hr_size[0] // lr_size[0]
+    y_scale = hr_size[1] // lr_size[1]
+    # shift barcode coord to top left tile coord
+    x_shift = tile_size[0] // 2
+    y_shift = tile_size[1] // 2
+    # modify and return tile coordinates
+    tile_coords = bar_coords.copy()
+    tile_coords["imagerow"] = bar_coords["imagerow"] * y_scale - y_shift
+    tile_coords["imagecol"] = bar_coords["imagecol"] * x_scale - x_shift
+    return tile_coords
+
+
+def save_tile(img, dir, sample_id, tissue_id, barcode, tile_size):
+    """Save tile as jpeg"""
+    tile_size_str = f"{tile_size[0]}x{tile_size[1]}"
+    fname = f"{sample_id}-{tissue_id}-{barcode}-{tile_size_str}.jpeg"
+    fpath = Path(dir) / fname
+    img.save(fpath)
+
+
+def main(sample_path, wsi_fname, sample_id, tissue_id, tile_size):
+    """Tile WSI and save tiles"""
+    # read barcode coords df
+    barcode_df_fname = f"{tissue_id}-{sample_id}-tc.feather"
+    barcode_df_path = Path(sample_path) / "assay_data" / barcode_df_fname
+    barcode_df = pd.read_feather(barcode_df_path)
+    # read low res img dimensions
+    im_dims_fname = f"{tissue_id}-{sample_id}-im_dims.txt"
+    im_dims_path = Path(sample_path) / "assay_data" / im_dims_fname
+    im_dims = pd.read_csv(im_dims_path, sep=" ", header=None)
+    im_dims = tuple(im_dims.loc[0])
+    # read wsi
+    wsi_path = Path(sample_path) / "TP_Images" / wsi_fname
+    wsi = open_slide(str(wsi_path))
+    hr_size = wsi.dimensions
+    # tile wsi
+    tile_coords = barcode_coords_to_tile_coords(barcode_df, tile_size, im_dims, hr_size)
+    for (_, (barcode, row, col)) in tile_coords.iterrows():
+        row, col = int(row), int(col)
+        tile_img = wsi.read_region((col, row), 0, tile_size)
+        tile_img = tile_img.convert("RGB")
+        tile_dir = Path(sample_path) / "Raw_Tiles"
+        save_tile(tile_img, tile_dir, sample_id, tissue_id, barcode, tile_size)
 
 
 if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(description="Generate tiles from wsi file")
-    parser.add_argument("--wsi_file", type=str, help="path to wsi file")
-    parser.add_argument("--dest_dir", type=str, help="directory where tiles will go")
-    parser.add_argument("--coord_file", type=str, help="path to coordinate file")
-    parser.add_argument("--level", type=int, help="level of wsi")
-    parser.add_argument("--width", type=int, help="tile width")
-    parser.add_argument("--height", type=int, help="tile height")
+    parser.add_argument("--sample_path", type=str, help="Path to sample directory")
+    parser.add_argument("--wsi_fname", type=str, help="WSI file name")
+    parser.add_argument("--sample_id", type=str, help="Sample that contains tissue")
+    parser.add_argument("--tissue_id", type=str, help="Tissue being tiled")
+    parser.add_argument("--tile_width", type=int)
+    parser.add_argument("--tile_height", type=int)
     args = parser.parse_args()
 
-    wsi = open_slide(args.wsi_file)
-    coords = coords_from_file(args.coord_file)
-    tile_info = TileInfo(
-        wsi, Path(args.wsi_file).stem, coords, args.level, (args.width, args.height)
+    tile_size = (args.tile_width, args.tile_height)
+    
+    main(
+        args.sample_path,
+        args.wsi_fname,
+        args.sample_id,
+        args.tissue_id,
+        tile_size,
     )
-
-    tile_writer(wsi_tile_generator(tile_info), Path(args.dest_dir))
