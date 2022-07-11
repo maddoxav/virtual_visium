@@ -58,15 +58,6 @@ def main(sample_path, wsi_fname, sample_id, tissue_id, tile_size):
         tile_dir = Path(sample_path) / "Raw_Tiles"
         save_tile(tile_img, tile_dir, sample_id, tissue_id, tc['barcode'], tile_size)
 
-sample_path = r"C:\Users\maddoxav\OneDrive - Michigan Medicine\Documents\Rao_Lab\data\GBM_spatial_transcriptomics\Sample-4774"
-wsi_fname = "4774-DH-S1-A_20220126_10X_V11M15-127.tif"
-sample_id = "s4774"
-tissue_id = "brain1A"
-tile_width = 256
-tile_height = 256
-tile_size = (tile_width, tile_height)
-
-
 if __name__ == "__main__":
     import argparse
 
