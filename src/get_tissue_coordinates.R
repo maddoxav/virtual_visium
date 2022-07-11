@@ -1,3 +1,5 @@
+library(Seurat)
+library(SeuratData)
 library(feather)
 
 get_coordinates <- function(data, image){
