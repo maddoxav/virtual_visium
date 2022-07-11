@@ -1,5 +1,12 @@
 library(feather)
 
+get_coordinates <- function(data, image){
+  tc <- data@images[[image]]@coordinates
+  tc <- cbind(rownames(tc), tc)
+  names(tc)[1] <- "barcode"
+  return(tc)
+}
+
 ## Sample 1512
 tissue_ids <- c("brain1A", "brain1B", "brain1C", "brain1D")
 sample_dir <- "Rao_Lab/data/GBM_spatial_transcriptomics/Sample-1512"
@@ -10,10 +17,10 @@ data_path <-
 
 merged_seur_data <- readRDS(data_path)
 
-tcA <- merged_seur_data@images$brain1A@coordinates
-tcB <- merged_seur_data@images$brain1B@coordinates
-tcC <- merged_seur_data@images$brain1C@coordinates
-tcD <- merged_seur_data@images$brain1D@coordinates
+tcA <- get_coordinates(merged_seur_data, "brain1A")
+tcB <- get_coordinates(merged_seur_data, "brain1B")
+tcC <- get_coordinates(merged_seur_data, "brain1C")
+tcD <- get_coordinates(merged_seur_data, "brain1D")
 
 write_feather(tcA, file.path(dest_dir, "brain1A-s1512-tc.feather"))
 write_feather(tcB, file.path(dest_dir, "brain1B-s1512-tc.feather"))
@@ -30,10 +37,10 @@ data_path <-
 
 merged_seur_data <- readRDS(data_path)
 
-tcA <- merged_seur_data@images$brain1A@coordinates
-tcB <- merged_seur_data@images$brain1B@coordinates
-tcC <- merged_seur_data@images$brain1C@coordinates
-tcD <- merged_seur_data@images$brain1D@coordinates
+tcA <- get_coordinates(merged_seur_data, "brain1A")
+tcB <- get_coordinates(merged_seur_data, "brain1B")
+tcC <- get_coordinates(merged_seur_data, "brain1C")
+tcD <- get_coordinates(merged_seur_data, "brain1D")
 
 write_feather(tcA, file.path(dest_dir, "brain1A-s4774-tc.feather"))
 write_feather(tcB, file.path(dest_dir, "brain1B-s4774-tc.feather"))
