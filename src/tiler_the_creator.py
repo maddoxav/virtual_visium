@@ -1,12 +1,7 @@
 # not cross-platform!!! windows only right now!!!
 # replace with path to your own openslide bin folder
 import os
-
-OPENSLIDE_PATH = (
-    r"C:\Users\maddoxav\openslide-win64-20171122\openslide-win64-20171122\bin"
-)
-with os.add_dll_directory(OPENSLIDE_PATH):
-    from openslide import open_slide
+from openslide import open_slide
 from pathlib import Path
 from dataclasses import dataclass
 import pandas as pd
