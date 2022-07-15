@@ -4,6 +4,8 @@ import pandas as pd
 import numpy as np
 from torch.utils.data import Dataset
 from torchvision.io import read_image
+from PIL import Image
+from torchvision.transforms import transforms
 
 
 def parse_tile_name(tile_name: str):
@@ -23,9 +25,7 @@ def parse_tile_name(tile_name: str):
     }
 
 
-def unparse_tile_name(
-    sample_id: str, tissue_id: str, barcode: str, size: tuple[int, int]
-):
+def unparse_tile_name(sample_id: str, tissue_id: str, barcode: str, size: tuple):
     """Create tile name from it's components"""
     barcode = "-".join(barcode.split("."))
     return f"{sample_id}-{tissue_id}-{barcode}-{size[0]}x{size[1]}.jpeg"
@@ -67,10 +67,15 @@ class VisiumImageDataset(Dataset):
         data_path: Path,
         count_mat_dir: str,
         raw_tile_dir: str,
-        tile_size: tuple[int, int],
+        tile_size: tuple,
         symbol: str,
-        transform=None,
-        target_transform=None,
+        
+        #transform=None,
+        # at least ToTensor is needed
+        transform=transforms.Compose([transforms.RandomHorizontalFlip(),
+                                     transforms.ToTensor(),
+                                     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])]),
+        target_transform=None
     ):
         count_mat_dpath = data_path / count_mat_dir
         self.tile_labels = get_symbol_values(count_mat_dpath, symbol)
@@ -87,8 +92,10 @@ class VisiumImageDataset(Dataset):
         sample_id, tissue_id, barcode = self.tile_labels.index[idx]
         tile_name = unparse_tile_name(sample_id, tissue_id, barcode, self.tile_size)
         tile_fpath = self.tile_dpath / tile_name
-        image = read_image(str(tile_fpath))
-        label = self.tile_labels.iloc[idx]
+        # image = read_image(str(tile_fpath))
+        image = Image.open(str(tile_fpath))  # RGB, W, H, C
+        #label = self.tile_labels.iloc[idx]
+        label = self.tile_labels.iloc[idx].tolist()
         if self.transform:
             image = self.transform(image)
         if self.target_transform:
