@@ -7,7 +7,7 @@ import torch.nn.functional as F
 from torchvision.transforms import transforms
 import pandas as pd
 import time
-from tqdm import tqdm
+import tqdm
 import numpy as np
 import subprocess
 import torch.optim as optim
@@ -26,7 +26,7 @@ def calc_cor(outputs, labels):
         corR.append(np.corrcoef(outputs[:,i].to('cpu').detach().numpy(), labels[:,i].to('cpu').detach().numpy())[0,1])
     corR = np.array(corR)
     corR[np.isnan(corR)] = 0.0      
-    print("corR: "+str(corR))
+    #print("corR: "+str(corR))
 
     return np.mean(corR)
 
@@ -40,6 +40,17 @@ def loss_function(outputs, labels):
 
     return loss
 
+def build_resnet34(pretrained=True, num_features=1):
+    # load resnet34 model
+    net = torchvision.models.resnet34(pretrained=pretrained)
+    # need to change the fc-layer for regression, since origin torch resnet model is for classification
+    fc_inputs = net.fc.in_features
+    # 添加全连接层
+    net.fc = nn.Linear(fc_inputs, num_features)
+    # train mode
+    net.train()
+
+    return net
 
 def build_resnet50(pretrained=True, num_features=1):
     # load resnet50 model
@@ -53,8 +64,21 @@ def build_resnet50(pretrained=True, num_features=1):
 
     return net
 
+def build_resnet101(pretrained=True, num_features=1):
+    # load resnet101 model
+    net = torchvision.models.resnet101(pretrained=pretrained)
+    # need to change the fc-layer for regression, since origin torch resnet model is for classification
+    fc_inputs = net.fc.in_features
+    # 添加全连接层
+    net.fc = nn.Linear(fc_inputs, num_features)
+    # train mode
+    net.train()
+
+    return net
+
 
 def run_train(net, dataloader_dict, optimizer, num_epochs=100, device='cpu', outDir='./output', name=''):
+
     ### set device
     if str(device) != 'cpu':
         net.to(device)
@@ -73,6 +97,7 @@ def run_train(net, dataloader_dict, optimizer, num_epochs=100, device='cpu', out
         train_cor = 0
         valid_cor = 0
         
+
         # train and valid roop per epoch
         for phase in ['train', 'valid']:
             net.train() if phase == 'train' else net.eval() # train or eval mode
@@ -84,7 +109,8 @@ def run_train(net, dataloader_dict, optimizer, num_epochs=100, device='cpu', out
             if (epoch == 0) and (phase == 'train'): continue
                 
             # extract minibatch from dataloader
-            for inputs, labels in tqdm(dataloader_dict[phase]):
+            for inputs, labels in tqdm.tqdm(dataloader_dict[phase]):
+                labels = labels.reshape(-1,1)
                 # if GPU is avalable
                 if str(device) != 'cpu':
                     inputs = inputs.to(device)
@@ -95,7 +121,7 @@ def run_train(net, dataloader_dict, optimizer, num_epochs=100, device='cpu', out
 
                 # forward calculation
                 with torch.set_grad_enabled(phase == 'train'):
-                    outputs = net(inputs)
+                    outputs = net(inputs).reshape(-1,1)
                     
                     # calculate loss
                     loss = loss_function(outputs, labels)
