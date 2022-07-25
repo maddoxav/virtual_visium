@@ -70,7 +70,6 @@ class VisiumImageDataset(Dataset):
         tile_size: tuple,
         symbol: str,
         
-        #transform=None,
         # at least ToTensor is needed
         transform=transforms.Compose([transforms.RandomHorizontalFlip(),
                                      transforms.ToTensor(),
@@ -92,9 +91,7 @@ class VisiumImageDataset(Dataset):
         sample_id, tissue_id, barcode = self.tile_labels.index[idx]
         tile_name = unparse_tile_name(sample_id, tissue_id, barcode, self.tile_size)
         tile_fpath = self.tile_dpath / tile_name
-        # image = read_image(str(tile_fpath))
         image = Image.open(str(tile_fpath))  # RGB, W, H, C
-        #label = self.tile_labels.iloc[idx]
         label = self.tile_labels.iloc[idx].tolist()
         if self.transform:
             image = self.transform(image)
